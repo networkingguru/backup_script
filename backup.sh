@@ -115,11 +115,11 @@ function mu_bu {
 	fi
 	
 	echo "Posting Kernel"
-	python ~/bin/newsmangler/mangler.py -f "$subject kernel" $temppath$kernel.gpg 	
+	python /usr/local/bin/newsmangler/mangler.py -f "$subject kernel" $temppath$kernel.gpg 	
 	
 	echo "Posting main backup"	
-	python  ~/bin/newsmangler/mangler.py -f  $subject $temppath$output_file_to_keep
-	python  ~/bin/newsmangler/mangler.py -f  $subject $output_file
+	python  /usr/local/bin/newsmangler/mangler.py -f  $subject $temppath$output_file_to_keep
+	python  /usr/local/bin/newsmangler/mangler.py -f  $subject $output_file
 }
 
 function nu_bu {
