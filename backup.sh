@@ -21,50 +21,53 @@
 #	spending a lot of time on a restore script is really warranted. If there's a big demand, though, I will post up 
 # 	my notes on manually doing it so you can at least have a starting point. 
 #	Cheers,
-#	Brian (runningones@gmail.com)
+#	Brian 
 
 #---------- user config start ----------
-username="Login" 																				#Enter your Usenet Server Login Here
-password="password" 																			#Enter your Usenet Server Password Here
-server="news.isp.com" 																		#Enter your Usenet Server Here
-temppath="/backup/"																			#Path where all backup files should be stored. Should NOT be part of ~, and you will need full permissions to this path
-newsgroup="alt.binaries.backup"															#Newsgroup to post to. The default is a good spot, usually.
-poster="TuxBox"																				#Name the system making the backup. This will be listed in the posting for you to find it for restores.
-email="not@telling.com"																		#Poster email address. Helps you find the post to download it. 
-subject="$now backup"																		#Subject line of newsgroup post. $now timestamps it with the date.
-bin_path="~/bin"																				#Path where backup.sh and restore.sh are kept
-gpg_password='"password goes here"'														#Password for GPG encryption. Single and double quote this password if it has spaces, otherwise single quote only.
-rar_password="password goes here"														#RAR password
-exclusion_file_path="/home/$sys_username/Documents/exclude_list.txt"			#Path to a file containing a rsync-formatted list of file names or wildcards to exclude from the backup. See rsync man pages/help for details.
+username="user" 			#Enter your Usenet Server Login Here
+password="password" 			#Enter your Usenet Server Password Here
+server="news.isp.net" 			#Enter your Usenet Server Here
+temppath="/backup/"			#Path where all backup files should be stored. Should NOT be part of ~, and you will need full permissions to this path
+newsgroup="alt.binaries.backup"		#Newsgroup to post to. The default is a good spot, usually.
+poster="TuxBox"				#Name the system making the backup. This will be listed in the posting for you to find it for restores.
+email="not@telling.com"			#Poster email address. Helps you find the post to download it. 
+subject="$HOSTNAME $now backup"		#Subject line of newsgroup post. $now timestamps it with the date.
+bin_path="/home/user"			#Path where backup.sh and restore.sh are kept
+gpg_password='password'			#Password for GPG encryption. Single and double quote this password if it has spaces, otherwise single quote only.
+
 #---------- user config end ----------
 
 #----------	system config start ----------
-now=$(date +"%m-%d-%Y")																		#Do not edit.																
-kernel="kernel.$now.tar.gz"																#Do not edit.
-kernel_gpg="$kernel.gpg"																	#Do not edit.
-backup_tarball="backup.$now.tar.gz"														#Do not edit.
-input_file="$temppath$backup_tarball.gpg"												#Do not edit.
-output_file="$temppath$now.cruft.rar"													#Do not edit.	
-par_file="$temppath$now.cruft.rar.par2"												#Do not edit.	
-input_file_to_keep="$backup_tarball.gpg"												#Do not edit.	
-output_file_to_keep="$now.cruft.rar.*.par2"											#Do not edit.	
-kernel_backup_path="$temppath$kernel/"													#Do not edit.
-sys_username="`whoami`/"																	#Do not edit.
+now=$(date +"%m-%d-%Y")				#Do not edit.																
+kernel="kernel.$now"				#Do not edit.
+kernel_gpg="$kernel.gpg"			#Do not edit.
+backup_tarball="backup.$now.tar.gz"		#Do not edit.
+input_file="$temppath$backup_tarball.gpg"	#Do not edit.
+output_file="$temppath$now.cruft.rar"		#Do not edit.	
+par_file="$temppath$now.cruft.rar.par2"		#Do not edit.	
+input_file_to_keep="$backup_tarball.gpg"	#Do not edit.	
+output_file_to_keep="$now.cruft.rar.*.par2"	#Do not edit.	
+kernel_backup_path="$temppath$kernel/"		#Do not edit.
+sys_username="`whoami`/"			#Do not edit.
 #----------	system config end ----------
 
 function kernel_bu {
 #Backup core components
 	dpkg --get-selections > ~/Package.list
 	sudo cp /etc/apt/sources.list ~/sources.list
-	sudo apt-key exportall > ~/Repo.keys
+	sudo apt-key exportall > ~/Repo.keys	
+	sudo mkdir $kernel_backup_path
+	sudo chown -R $sys_username $temppath
 	cp $bin_path/backup.sh $kernel_backup_path
 	cp $bin_path/restore.sh $kernel_backup_path
 	cp ~/Package.list $kernel_backup_path
 	cp ~/sources.list $kernel_backup_path
 	cp ~/Repo.keys $kernel_backup_path
-	tar -zcvf $temppath$kernel $kernel_backup_path
+	tar -zcvf $temppath$kernel.tar.gz $kernel_backup_path
+
 #Encrypt core
-	echo $gpg_password | gpg --yes --batch --passphrase-fd 0 -c $temppath$kernel
+	echo $gpg_password | gpg --yes --batch --passphrase-fd 0 -c $temppath$kernel.tar.gz
+
 }
 
 
@@ -98,7 +101,7 @@ function gen_bu {
 		echo "Nothing found, performing full backup"
 		kernel_bu
 		echo "Kernel Backup complete"
-		rsync --progress -ra --exclude '*.iso' --exclude '*.ISO' --exclude-from $exclusion_file_path /home/`whoami` $temppath
+		rsync --progress -ra --exclude '*.iso' --exclude '*.ISO' /home/`whoami` $temppath
 		echo "Deleting old junk"
 		cd $temppath
 		find $temppath -maxdepth 1 -type f -not -name $backup_tarball -not -name $input_file_to_keep -not -name $output_file_to_keep -not -name $kernel -not -name $kernel_gpg | xargs rm
@@ -110,12 +113,12 @@ fi
 function mu_bu {
 	echo "Beginning Usenet backup"	
 	if [ ! -f $temppath$output_file_to_keep ]; then
-		rar a -$rar_password $output_file $input_file
+		rar a $output_file $input_file
 		par2 c -s2250000 -r10 $output_file
 	fi
 	
 	echo "Posting Kernel"
-	python /usr/local/bin/mangler/mangler.py -f "$subject kernel" $temppath$kernel.gpg 	
+	python /usr/local/bin/mangler/mangler.py -f "$subject kernel" $temppath$kernel 	
 	
 	echo "Posting main backup"	
 	python  /usr/local/bin/mangler/mangler.py -f  $subject $temppath$output_file_to_keep
@@ -125,12 +128,12 @@ function mu_bu {
 function nu_bu {
 	echo "Beginning Usenet backup"	
 	if [ ! -f $temppath$output_file_to_keep ]; then
-		rar a -$rar_password $output_file $input_file
+		rar a $output_file $input_file
 		par2 c -s2250000 -r10 $output_file
 	fi
 	
 	echo "Posting Kernel"
-	newspost -i "$server" -u "$username" -p "$password" -f "$email" -n "$newsgroup" -y -z 119 -s "$subject" $temppath$kernel.gpg
+	newspost -i "$server" -u "$username" -p "$password" -f "$email" -n "$newsgroup" -y -z 119 -s "$subject" $temppath$kernel
 	
 	echo "Posting main backup"	
 	newspost -i "$server" -u "$username" -p "$password" -f "$email" -n "$newsgroup" -y -z 119 -s "$subject" $temppath/*.par2
