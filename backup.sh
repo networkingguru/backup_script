@@ -58,8 +58,8 @@ function kernel_bu {
     sudo apt-key exportall | tee -a ~/Repo.keys >/dev/null
     sudo mkdir "${kernel_backup_path}"
     sudo chown -R "${sys_username}" "${temppath}"
-    cp $bin_path/backup.sh "${kernel_backup_path}"
-    cp $bin_path/restore.sh "${kernel_backup_path}"
+    cp ${bin_path}/backup.sh "${kernel_backup_path}"
+    cp ${bin_path}/restore.sh "${kernel_backup_path}"
     cp ~/Package.list "${kernel_backup_path}"
     cp ~/sources.list "${kernel_backup_path}"
     cp ~/Repo.keys "${kernel_backup_path}"
@@ -144,7 +144,7 @@ function g_bu {
     grive
     cp $temppath*.gpg ~/google_drive/
     echo "Copied new gpg, syncing"
-    cd "~/google_drive" || exit 1
+    cd ~/google_drive || exit 1
     grive
 }
 
